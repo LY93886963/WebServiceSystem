@@ -22,7 +22,7 @@ npm install
 npm run serve
 ```
 
-- 运行
+- 后端
 
 ```python
 cd backend
