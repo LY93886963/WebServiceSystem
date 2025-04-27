@@ -1,131 +1,62 @@
-# 博物馆文物历史时间轴项目
+# 海外文物知识服务子系统
 
-一个基于Vue和Flask的博物馆文物历史时间轴应用，使用Timeline JS展示文物历史，采用黑白高级风格。
+## 👀简介
 
-## 功能特点
+本项目是一个基于 **Flask** 和 **Vue** 开发的 Web 应用，旨在为用户提供文物展示、查询、可视化和个人信息管理等服务。系统通过知识图谱技术展示文物相关数据，支持数据浏览、查询和可视化显示，帮助用户更好地了解和探索文物信息。
 
-- 前端：基于Vue3的响应式界面
-- 后端：Flask提供REST API
-- 数据库：MySQL存储博物馆文物数据
-- 时间轴展示：使用Timeline JS展示精美的文物历史时间轴
-- 功能：
-  - 按朝代和出处筛选文物
-  - 精美的黑白高级风格
-  - 支持图片展示
-  - 详细的文物信息描述
-  - 链接到文物详情页面
+## 📦Usage
 
-## 技术栈
+- 安装
 
-- 前端：Vue 3、Axios
-- 后端：Flask、Flask-SQLAlchemy、Flask-CORS
-- 数据库：MySQL (binxifaniya_museum)
-- 第三方工具：Timeline JS
-
-## 安装和使用
-
-### 前提条件
-
-- Node.js (v12+)
-- Python (v3.7+)
-- MySQL数据库
-
-### 后端设置
-
-1. 创建并激活Python虚拟环境（可选但推荐）：
-
-```bash
-# Windows
-python -m venv venv
-venv\Scripts\activate
-
-# macOS/Linux
-python3 -m venv venv
-source venv/bin/activate
+```python
+git clone https://github.com/LY93886963/WebServiceSystem.git
+conda create -n WebServiceSystem
+conda activate WebServiceSystem
 ```
 
-2. 安装后端依赖：
+- 前端
 
-```bash
-pip install -r requirements.txt
-```
-
-3. 设置环境变量：
-
-```bash
-# 复制环境变量示例文件
-cp backend/.env.example backend/.env
-
-# 然后编辑.env文件，确认数据库连接信息
-# DATABASE_URI=mysql+pymysql://cs2202:abcd@123.56.94.39/binxifaniya_museum
-```
-
-4. 运行后端服务：
-
-```bash
-cd backend
-python run.py
-```
-
-### 前端设置
-
-1. 安装前端依赖：
-
-```bash
+```python
 cd frontend
 npm install
-```
-
-2. 运行开发服务器：
-
-```bash
 npm run serve
 ```
 
-3. 构建生产版本：
+- 运行
 
-```bash
-npm run build
+```python
+cd backend
+pip install -r requirements.txt
+python app.py
 ```
 
-## 项目结构
 
-```
-├── backend/             # 后端Flask应用
-│   ├── app/             # 应用代码
-│   │   ├── models/      # 数据库模型
-│   │   ├── routes/      # API路由
-│   │   └── __init__.py  # 应用初始化
-│   ├── .env.example     # 环境变量示例
-│   └── run.py           # 应用入口点
-│
-├── frontend/            # 前端Vue应用
-│   ├── public/          # 静态文件
-│   ├── src/             # 源代码
-│   │   ├── assets/      # 资源文件
-│   │   ├── components/  # Vue组件
-│   │   ├── App.vue      # 主组件
-│   │   └── main.js      # 入口点
-│   ├── package.json     # 包配置
-│   └── vue.config.js    # Vue配置
-│
-├── requirements.txt     # Python依赖
-└── README.md            # 项目文档
-```
 
-## 数据库结构
+## 📌技术栈
 
-项目使用binxifaniya_museum数据库中的数据，包含以下字段：
+- 前端：Vue 3、Axios
+- 后端：Flask、Flask-SQLAlchemy、Flask-CORS 
+- 数据库：MySQL 、neo4j
 
-- 博物馆博物编号 (artifact_number)
-- 文物详细信息 (detailed_info)
-- 文物名称 (artifact_name)
-- 时间 (time_period)
-- 朝代 (dynasty)
-- 出处 (provenance)
-- 详情页地址 (detail_url)
-- 图片url (image_url)
+## ⏳功能模块
 
-## 许可证
+#### 数据浏览
 
-本项目采用MIT许可证。
+- **筛选与排序**：支持按照文物类型、年代、博物馆等进行筛选、排序，以便用户快速找到感兴趣的文物
+- **文物详情**：每件文物提供详细的信息展示，包括文本内容、图像等，用户可以点击文物图片进行放大查看
+-  **相关文物推荐**：在每件文物的页面中，展示与该文物相关的其他文物，相关规则可以是相似主题、同一作者、图像内容相似等
+
+#### 数据查询
+
+- **简单查询**：用户可以通过输入关键字（如文物名称、博物馆名称、文物年代等）进行快速查询
+-  **高级查询**：提供对文物多个字段的高级筛选和查询功能，用户可以根据需求进行更精确的文物查找
+
+#### 数据可视化
+
+- **知识图谱展示**：通过力导向图展示文物知识图谱，用户可以从不同角度探索文物之间的关系。参考全历史网站、Neo4j 图数据库等可视化效果。
+- **文物时间轴**：按照时间轴展示文物的相关信息，帮助用户了解文物的历史背景和时代沿革
+
+#### 用户个人信息管理
+
+- **用户注册与登录**：支持用户注册、登录、修改密码等基本个人信息管理功能。
+-  **收藏与浏览记录**：用户可以收藏感兴趣的文物，系统记录用户的浏览历史，并提供个性化推荐。
