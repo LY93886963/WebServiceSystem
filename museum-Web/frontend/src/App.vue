@@ -3,10 +3,24 @@
     <header class="header">
       <div class="header-content">
         <h1>博物馆文物时间轴</h1>
-        <nav class="main-nav">
+        <nav class="main-nav" v-if="isAuthenticated">
           <router-link to="/" exact>首页</router-link>
+          <router-link to="/timeline">时间轴</router-link>
+          <router-link to="/knowledge-graph">知识图谱</router-link>
           <router-link to="/about">关于</router-link>
         </nav>
+        <div class="user-actions" v-if="isAuthenticated">
+          <router-link to="/profile" class="user-profile">
+            <div class="avatar">
+              <img src="https://via.placeholder.com/40?text=头像" alt="用户头像">
+            </div>
+            <span class="username">文物爱好者</span>
+          </router-link>
+          <button class="logout-btn" @click="logout">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+            退出
+          </button>
+        </div>
       </div>
     </header>
     <main class="main-content">
@@ -16,7 +30,7 @@
         </transition>
       </router-view>
     </main>
-    <footer class="footer">
+    <footer class="footer" v-if="isAuthenticated">
       <div class="footer-content">
         <p>© {{ new Date().getFullYear() }} 博物馆文物时间轴项目</p>
         <p class="footer-links">
@@ -27,6 +41,47 @@
     </footer>
   </div>
 </template>
+
+<script>
+export default {
+  name: 'App',
+  data() {
+    return {
+      isAuthenticated: false
+    }
+  },
+  created() {
+    // 检查用户是否已登录
+    this.isAuthenticated = localStorage.getItem('isAuthenticated') === 'true'
+    
+    // 监听登录状态变化
+    window.addEventListener('storage', this.checkAuth)
+  },
+  beforeUnmount() {
+    window.removeEventListener('storage', this.checkAuth)
+  },
+  watch: {
+    '$route'() {
+      // 当路由变化时，重新检查认证状态
+      this.isAuthenticated = localStorage.getItem('isAuthenticated') === 'true'
+    }
+  },
+  methods: {
+    checkAuth(e) {
+      if (e.key === 'isAuthenticated') {
+        this.isAuthenticated = e.newValue === 'true'
+      }
+    },
+    logout() {
+      if (confirm('确定要退出登录吗？')) {
+        localStorage.removeItem('isAuthenticated')
+        this.isAuthenticated = false
+        this.$router.push('/login')
+      }
+    }
+  }
+}
+</script>
 
 <style>
 :root {
@@ -141,6 +196,60 @@ a:hover {
   color: var(--accent-color);
 }
 
+.user-actions {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: white;
+  transition: opacity 0.3s;
+}
+
+.user-profile:hover {
+  opacity: 0.8;
+  color: white;
+}
+
+.avatar {
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid var(--accent-color);
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.username {
+  font-size: 0.9rem;
+}
+
+.logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: none;
+  color: #ccc;
+  font-family: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: color 0.3s;
+}
+
+.logout-btn:hover {
+  color: white;
+}
+
 .main-content {
   flex: 1;
   padding: 2rem;
@@ -187,28 +296,58 @@ a:hover {
   opacity: 0;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 992px) {
   .header-content {
-    flex-direction: column;
-    padding: 0.5rem 1rem;
-    gap: 0.5rem;
-  }
-  
-  .header {
-    height: auto;
-    padding: 0.75rem 0;
-  }
-  
-  .header h1 {
-    font-size: 1.4rem;
+    padding: 0 1.5rem;
   }
   
   .main-nav {
     gap: 15px;
   }
   
-  .main-content {
-    padding: 1.5rem 1rem;
+  .header h1 {
+    font-size: 1.5rem;
+  }
+  
+  .header h1::before {
+    width: 6px;
+    height: 24px;
+  }
+}
+
+@media (max-width: 768px) {
+  .header-content {
+    flex-wrap: wrap;
+    padding: 0.5rem 1rem;
+    height: auto;
+  }
+  
+  .header {
+    height: auto;
+    position: static;
+  }
+  
+  .header h1 {
+    width: 100%;
+    margin-bottom: 0.5rem;
+  }
+  
+  .main-nav {
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .main-nav a {
+    white-space: nowrap;
+  }
+  
+  .user-actions {
+    width: 100%;
+    justify-content: flex-end;
+    padding-top: 0.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
   }
   
   .footer-content {

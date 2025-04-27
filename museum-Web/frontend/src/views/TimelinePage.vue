@@ -1,5 +1,5 @@
 <template>
-  <div class="home">
+  <div class="timeline-page">
     <div class="intro-section">
       <div class="intro">
         <h2>{{ timelineConfig.title }}</h2>
@@ -69,7 +69,7 @@
 import axios from 'axios'
 
 export default {
-  name: 'Home',
+  name: 'TimelinePage',
   data() {
     return {
       timelineConfig: {
@@ -104,7 +104,7 @@ export default {
 </script>
 
 <style scoped>
-.home {
+.timeline-page {
   display: flex;
   flex-direction: column;
   gap: 3rem;
@@ -330,7 +330,7 @@ export default {
 }
 
 @media (max-width: 768px) {
-  .home {
+  .timeline-page {
     gap: 2rem;
   }
   
