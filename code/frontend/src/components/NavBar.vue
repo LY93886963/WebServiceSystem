@@ -8,7 +8,12 @@
         <a href="#">What's On</a>
         <a href="#">Art</a>
         <a href="#">Donate</a>
-        <a href="#">Join/Log in</a>
+        <router-link to="/login" v-if="!isLoggedIn">登录/注册</router-link>
+        <router-link to="/user" v-else class="user-link">
+          <img v-if="userAvatar" :src="userAvatar" class="avatar-mini" alt="用户头像">
+          <span v-else class="avatar-placeholder">{{ userInitial }}</span>
+          <span>{{ userName }}</span>
+        </router-link>
       </div>
     </div>
 
@@ -56,6 +61,7 @@
         <router-link to="/timeline">时间轴</router-link>
         <router-link to="/knowledge">知识图谱</router-link>
         <router-link to="/exhibitions">特展</router-link>
+        <router-link to="/user">用户中心</router-link>
       </nav>
     </nav>
   </header>
@@ -67,7 +73,15 @@ export default {
   data() {
     return {
       searchQuery: '',
-      showSearchPanel: false
+      showSearchPanel: false,
+      isLoggedIn: false, // 默认未登录，实际应用中应从状态管理或API获取
+      userName: '博物馆爱好者',
+      userAvatar: '' // 头像URL，如果为空则显示用户首字母
+    }
+  },
+  computed: {
+    userInitial() {
+      return this.userName ? this.userName.charAt(0).toUpperCase() : '游';
     }
   },
   methods: {
@@ -80,18 +94,29 @@ export default {
         this.showSearchPanel = false
       }
     },
-    // 新增方法：处理文档点击事件
+    // 处理文档点击事件
     handleDocumentClick(event) {
       // 检查点击是否发生在搜索容器内部
       const searchContainer = this.$refs.searchContainer;
       if (searchContainer && !searchContainer.contains(event.target)) {
         this.showSearchPanel = false;
       }
+    },
+    // 模拟登录状态 - 实际应用中应该连接到后端
+    checkLoginStatus() {
+      // 这里模拟从本地存储或cookies检查登录状态
+      this.isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+      if (this.isLoggedIn) {
+        this.userName = localStorage.getItem('userName') || '博物馆爱好者';
+        this.userAvatar = localStorage.getItem('userAvatar') || '';
+      }
     }
   },
   mounted() {
     // 添加全局点击监听
     document.addEventListener('click', this.handleDocumentClick);
+    // 检查登录状态
+    this.checkLoginStatus();
   },
   beforeUnmount() {
     // 组件销毁时移除监听，避免内存泄漏
@@ -322,6 +347,14 @@ export default {
   .search-categories {
     grid-template-columns: repeat(2, 1fr);
   }
+
+  .user-link span {
+    display: none; /* 在小屏幕上只显示头像 */
+  }
+  
+  .avatar-mini, .avatar-placeholder {
+    margin-right: 0;
+  }
 }
 
 @media (max-width: 480px) {
@@ -334,5 +367,53 @@ export default {
   .category-nav a {
     margin: 0;
   }
+}
+
+/* 用户链接样式 */
+.user-link {
+  display: flex;
+  align-items: center;
+  color: #333;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s;
+}
+
+.user-link:hover {
+  color: #000;
+}
+
+.avatar-mini {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  margin-right: 8px;
+  object-fit: cover;
+  border: 1px solid #ddd;
+}
+
+.avatar-placeholder {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: #333;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  margin-right: 8px;
+}
+
+/* 为用户中心链接添加特殊图标或样式 */
+.category-nav a[href="/user"] {
+  display: flex;
+  align-items: center;
+}
+
+.category-nav a[href="/user"]:before {
+  content: '👤';
+  margin-right: 4px;
+  font-size: 16px;
 }
 </style>

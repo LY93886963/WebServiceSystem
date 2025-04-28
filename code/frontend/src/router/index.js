@@ -4,6 +4,7 @@ import Timeline from '@/views/Timeline.vue'
 import Knowledge from '@/views/Knowledge.vue'
 import Login from '../views/Login.vue'
 import Detail from '../views/Detail.vue'
+import User from '../views/user.vue'
 
 const routes = [
   { path: '/', component: Home },
@@ -11,6 +12,7 @@ const routes = [
   { path: '/knowledge', component: Knowledge },
   { path: '/login', component: Login },
   { path: '/Detail', component: Detail },
+  { path: '/user', component: User },
 ]
 
 const router = createRouter({
