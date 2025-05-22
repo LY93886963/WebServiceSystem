@@ -2,13 +2,39 @@
   <header class="museum-header">
     <!-- 顶部信息栏 -->
     <div class="top-bar">
-      <div class="museum-name">THE CLEVELAND MUSEUM OF ART</div>
+      <div class="museum-name">THE MUSEUM OF ART</div>
       <div class="utility-links">
-        <a href="#">Visit</a>
-        <a href="#">What's On</a>
-        <a href="#">Art</a>
-        <a href="#">Donate</a>
-        <a href="#">Join/Log in</a>
+        <template v-if="!user">
+          <router-link to="/login" class="utility-link">Join/Log in</router-link>
+        </template>
+
+        <div v-else class="user-dropdown">
+          <button class="user-dropdown-toggle" @click.stop="toggleDropdown">
+            {{ user.username }}
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2"/>
+            </svg>
+          </button>
+          <transition name="fade">
+            <div v-show="showDropdown" class="user-dropdown-menu">
+              <router-link to="/user" class="dropdown-item" @click="showDropdown = false">
+                <svg class="dropdown-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" stroke="currentColor" stroke-width="2"/>
+                  <path d="M20.5901 22C20.5901 18.13 16.7402 15 12.0002 15C7.26015 15 3.41016 18.13 3.41016 22" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                <span>个人中心</span>
+              </router-link>
+              <button @click="handleLogout" class="dropdown-item">
+                <svg class="dropdown-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M15 4H18C19.1046 4 20 4.89543 20 6V18C20 19.1046 19.1046 20 18 20H15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M9 16L4 12L9 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M4 12H15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                <span>登出</span>
+              </button>
+            </div>
+          </transition>
+        </div>
       </div>
     </div>
 
@@ -18,84 +44,112 @@
         <span class="logo-text">文物数字博物馆</span>
       </router-link>
 
-      <div class="search-container" ref="searchContainer">
-        <form @submit.prevent="handleSearch">
-          <button type="submit" class="search-icon-button">
-            <svg class="search-icon" viewBox="0 0 24 24">
-              <path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 0 0 1.48-5.34c-.47-2.78-2.79-5-5.59-5.34a6.505 6.505 0 0 0-7.27 7.27c.34 2.8 2.56 5.12 5.34 5.59a6.5 6.5 0 0 0 5.34-1.48l.27.28v.79l4.25 4.25c.41.41 1.08.41 1.49 0 .41-.41.41-1.08 0-1.49L15.5 14zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
-            </svg>
-          </button>
-          <input
-            type="text"
-            v-model="searchQuery"
-            placeholder="Search the Collection"
-            class="search-input"
-            @focus="showSearchPanel = true"
-            @blur="setTimeout(() => { showSearchPanel = false }, 200)"
-          >
-        </form>
-
-        <!-- 搜索扩展面板 -->
-        <div class="search-panel" v-show="showSearchPanel">
-          <div class="search-categories">
-            <h4>Popular</h4>
-            <a href="#">Identities</a>
-            <a href="#">Highlights</a>
-            <a href="#">Open Access</a>
-            <a href="#">With Videos</a>
-            <a href="#">New Objects</a>
-            <a href="#">In 3-D</a>
-          </div>
-          <div class="advanced-search">
-            <a href="#">Advanced Search</a>
-          </div>
-        </div>
-      </div>
-
       <nav class="category-nav">
         <router-link to="/timeline">时间轴</router-link>
         <router-link to="/knowledge">知识图谱</router-link>
-        <router-link to="/exhibitions">特展</router-link>
+        <a href="#" class="advanced-search-link" @click.prevent="openAdvancedSearch">
+          高级搜索
+        </a>
       </nav>
     </nav>
+
+    <!-- 高级搜索面板 -->
+    <AdvancedSearchPanel
+      :visible="showAdvancedSearch"
+      @close="closeAdvancedSearch"
+      @search="handleAdvancedSearch"
+    />
   </header>
 </template>
 
 <script>
+import { ref, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
+import axios from 'axios'
+import AdvancedSearchPanel from './AdvancedSearchPanel.vue'
+
 export default {
   name: 'MuseumNavBar',
-  data() {
+  components: {
+    AdvancedSearchPanel
+  },
+  setup() {
+    const router = useRouter()
+    const user = ref(null)
+    const showDropdown = ref(false)
+    const showAdvancedSearch = ref(false)
+
+    // 获取当前用户
+    const fetchCurrentUser = async () => {
+      try {
+        const response = await axios.get('/api/user', { withCredentials: true })
+        if (response.data.success) {
+          user.value = response.data.user
+        }
+      } catch (error) {
+        console.error('获取用户信息失败:', error)
+      }
+    }
+
+    // 登出
+    const handleLogout = async () => {
+      try {
+        await axios.post('/api/logout', {}, { withCredentials: true })
+        user.value = null
+        showDropdown.value = false
+        router.push('/login')
+      } catch (error) {
+        console.error('登出失败:', error)
+        alert('登出失败，请重试')
+      }
+    }
+
+    // 切换下拉菜单
+    const toggleDropdown = () => {
+      showDropdown.value = !showDropdown.value
+    }
+
+    // 高级搜索
+    const openAdvancedSearch = () => {
+      showAdvancedSearch.value = true
+    }
+
+    const closeAdvancedSearch = () => {
+      showAdvancedSearch.value = false
+    }
+
+    const handleAdvancedSearch = (searchParams) => {
+      console.log('高级搜索参数:', searchParams)
+      closeAdvancedSearch()
+      // 这里可以处理搜索逻辑
+    }
+
+    // 点击外部关闭下拉菜单
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('.user-dropdown')) {
+        showDropdown.value = false
+      }
+    }
+
+    onMounted(() => {
+      fetchCurrentUser()
+      document.addEventListener('click', handleClickOutside)
+    })
+
+    onUnmounted(() => {
+      document.removeEventListener('click', handleClickOutside)
+    })
+
     return {
-      searchQuery: '',
-      showSearchPanel: false
+      user,
+      showDropdown,
+      showAdvancedSearch,
+      toggleDropdown,
+      handleLogout,
+      openAdvancedSearch,
+      closeAdvancedSearch,
+      handleAdvancedSearch
     }
-  },
-  methods: {
-    handleSearch() {
-      if (this.searchQuery.trim()) {
-        this.$router.push({
-          path: '/search',
-          query: { q: this.searchQuery }
-        })
-        this.showSearchPanel = false
-      }
-    },
-    // 新增方法：处理文档点击事件
-    handleDocumentClick(event) {
-      // 检查点击是否发生在搜索容器内部
-      const searchContainer = this.$refs.searchContainer;
-      if (searchContainer && !searchContainer.contains(event.target)) {
-        this.showSearchPanel = false;
-      }
-    }
-  },
-  mounted() {
-    // 添加全局点击监听
-    document.addEventListener('click', this.handleDocumentClick);
-  },
-  beforeUnmount() {
-    // 组件销毁时移除监听，避免内存泄漏
-    document.removeEventListener('click', this.handleDocumentClick);
   }
 }
 </script>
@@ -119,6 +173,7 @@ export default {
   box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 
+/* 顶部信息栏样式 */
 .top-bar {
   display: flex;
   justify-content: space-between;
@@ -135,17 +190,24 @@ export default {
   color: #333;
 }
 
-.utility-links a {
+.utility-links {
+  display: flex;
+  align-items: center;
+}
+
+.utility-link {
   color: #666;
   text-decoration: none;
   margin-left: 1.5rem;
   transition: color 0.3s;
+  font-size: 0.85rem;
 }
 
-.utility-links a:hover {
+.utility-link:hover {
   color: #000;
 }
 
+/* 主导航栏样式 */
 .main-nav {
   display: flex;
   justify-content: space-between;
@@ -153,6 +215,7 @@ export default {
   padding: 1rem 2rem;
   max-width: 1400px;
   margin: 0 auto;
+  position: relative;
 }
 
 .logo-link {
@@ -162,94 +225,15 @@ export default {
   color: #333;
   flex-shrink: 0;
   margin-right: 2rem;
-}
-
-.search-container {
-  position: relative;
-  flex-grow: 1;
-  max-width: 600px;
-}
-
-.search-input {
-  width: 100%;
-  padding: 0.8rem 1rem 0.8rem 3rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 1rem;
-  outline: none;
-  transition: border 0.3s;
-}
-
-.search-input:focus {
-  border-color: #666;
-}
-
-.search-icon-button {
-  position: absolute;
-  left: 1rem;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  cursor: pointer;
-}
-
-.search-icon {
-  width: 20px;
-  height: 20px;
-  fill: #666;
-}
-
-.search-panel {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  width: 100%;
-  background: white;
-  border: 1px solid #ddd;
-  border-top: none;
-  border-radius: 0 0 4px 4px;
-  padding: 1.5rem;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
   display: flex;
+  align-items: center;
 }
 
-.search-categories {
-  flex: 3;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
+.logo-text {
+  letter-spacing: 1px;
 }
 
-.search-categories h4 {
-  grid-column: 1 / -1;
-  margin-bottom: 0.5rem;
-  color: #333;
-}
-
-.search-categories a {
-  color: #666;
-  text-decoration: none;
-  font-size: 0.9rem;
-  transition: color 0.3s;
-}
-
-.search-categories a:hover {
-  color: #000;
-}
-
-.advanced-search {
-  flex: 1;
-  border-left: 1px solid #eee;
-  padding-left: 1.5rem;
-}
-
-.advanced-search a {
-  color: #0066cc;
-  text-decoration: none;
-  font-size: 0.9rem;
-}
-
+/* 分类导航样式 */
 .category-nav {
   display: flex;
   margin-left: 2rem;
@@ -262,6 +246,8 @@ export default {
   font-weight: 500;
   padding: 0.5rem 0;
   position: relative;
+  font-size: 1rem;
+  transition: color 0.3s;
 }
 
 .category-nav a:after {
@@ -280,6 +266,85 @@ export default {
   width: 100%;
 }
 
+.advanced-search-link {
+  cursor: pointer;
+}
+
+/* 用户下拉菜单样式 */
+.user-dropdown {
+  position: relative;
+  display: inline-block;
+  margin-left: 1.5rem;
+}
+
+.user-dropdown-toggle {
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  font: inherit;
+  transition: color 0.3s;
+}
+
+.user-dropdown-toggle:hover {
+  color: #000;
+}
+
+.user-dropdown-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  min-width: 160px;
+  z-index: 100;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  color: #333;
+  text-decoration: none;
+  text-align: left;
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  gap: 8px;
+  transition: background-color 0.2s;
+}
+
+.dropdown-item:hover {
+  background-color: #f5f5f5;
+}
+
+.dropdown-icon {
+  flex-shrink: 0;
+  color: #666;
+}
+
+/* 过渡动画 */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
 /* 响应式设计 */
 @media (max-width: 1024px) {
   .main-nav {
@@ -290,12 +355,6 @@ export default {
   .logo-link {
     order: 1;
     margin-bottom: 1rem;
-  }
-
-  .search-container {
-    order: 3;
-    width: 100%;
-    margin: 1rem 0;
   }
 
   .category-nav {
@@ -315,12 +374,12 @@ export default {
     margin-bottom: 0.5rem;
   }
 
-  .utility-links a {
-    margin: 0 0.5rem;
+  .utility-links {
+    margin-top: 0.5rem;
   }
 
-  .search-categories {
-    grid-template-columns: repeat(2, 1fr);
+  .utility-link {
+    margin: 0 0.5rem;
   }
 }
 
@@ -333,6 +392,7 @@ export default {
 
   .category-nav a {
     margin: 0;
+    font-size: 0.9rem;
   }
 }
 </style>

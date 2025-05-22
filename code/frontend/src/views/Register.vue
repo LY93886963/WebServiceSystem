@@ -1,18 +1,31 @@
 <template>
   <div class="auth-container">
     <div class="auth-card">
-      <h1 class="auth-title">登录</h1>
+      <h1 class="auth-title">注册</h1>
 
-      <form @submit.prevent="handleLogin" class="auth-form">
+      <form @submit.prevent="handleRegister" class="auth-form">
         <div class="form-group">
-          <label for="username_or_email">用户名或邮箱</label>
+          <label for="username">用户名</label>
           <input
-            id="username_or_email"
-            v-model="username_or_email"
+            id="username"
+            v-model="username"
             type="text"
             required
             class="form-input"
           />
+          <div v-if="errors.username" class="error-text">{{ errors.username }}</div>
+        </div>
+
+        <div class="form-group">
+          <label for="email">邮箱</label>
+          <input
+            id="email"
+            v-model="email"
+            type="email"
+            required
+            class="form-input"
+          />
+          <div v-if="errors.email" class="error-text">{{ errors.email }}</div>
         </div>
 
         <div class="form-group">
@@ -24,15 +37,28 @@
             required
             class="form-input"
           />
+          <div v-if="errors.password" class="error-text">{{ errors.password }}</div>
+        </div>
+
+        <div class="form-group">
+          <label for="confirmPassword">确认密码</label>
+          <input
+            id="confirmPassword"
+            v-model="confirmPassword"
+            type="password"
+            required
+            class="form-input"
+          />
+          <div v-if="errors.confirmPassword" class="error-text">{{ errors.confirmPassword }}</div>
         </div>
 
         <button type="submit" class="auth-button" :disabled="loading">
-          {{ loading ? '登录中...' : '登录' }}
+          {{ loading ? '注册中...' : '注册' }}
         </button>
 
         <div class="auth-footer">
-          <span>还没有账号？</span>
-          <router-link to="/register" class="auth-link">立即注册</router-link>
+          <span>已有账号？</span>
+          <router-link to="/login" class="auth-link">立即登录</router-link>
         </div>
       </form>
 
@@ -49,32 +75,76 @@ import { useRouter } from 'vue-router'
 import axios from 'axios'
 
 export default {
-  name: 'LoginPage',
+  name: 'RegisterPage',
   setup() {
     const router = useRouter()
-    const username_or_email = ref('')
+    const username = ref('')
+    const email = ref('')
     const password = ref('')
+    const confirmPassword = ref('')
+    const errors = ref({
+      username: '',
+      email: '',
+      password: '',
+      confirmPassword: ''
+    })
     const error = ref('')
     const loading = ref(false)
 
-    const handleLogin = async () => {
+    const validateForm = () => {
+      let isValid = true
+      errors.value = {
+        username: '',
+        email: '',
+        password: '',
+        confirmPassword: ''
+      }
+
+      if (username.value.length < 4 || username.value.length > 50) {
+        errors.value.username = '用户名长度应在4-5个字符之间'
+        isValid = false
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(email.value)) {
+        errors.value.email = '请输入有效的邮箱地址'
+        isValid = false
+      }
+
+      if (password.value.length < 8) {
+        errors.value.password = '密码长度至少为8个字符'
+        isValid = false
+      }
+
+      if (password.value !== confirmPassword.value) {
+        errors.value.confirmPassword = '两次输入的密码不一致'
+        isValid = false
+      }
+
+      return isValid
+    }
+
+    const handleRegister = async () => {
+      if (!validateForm()) return
+
       error.value = ''
       loading.value = true
 
       try {
-        const response = await axios.post('/api/login', {
-          username_or_email: username_or_email.value,
+        const response = await axios.post('/api/register', {
+          username: username.value,
+          email: email.value,
           password: password.value
         }, { withCredentials: true })
 
         if (response.data.success) {
-          router.push('/')
+          router.push('/login')
         } else {
-          error.value = response.data.message || '登录失败'
+          error.value = response.data.message || '注册失败'
         }
       } catch (err) {
         if (err.response) {
-          error.value = err.response.data.message || '登录失败'
+          error.value = err.response.data.message || '注册失败'
         } else {
           error.value = '网络错误，请稍后再试'
         }
@@ -84,11 +154,14 @@ export default {
     }
 
     return {
-      username_or_email,
+      username,
+      email,
       password,
+      confirmPassword,
+      errors,
       error,
       loading,
-      handleLogin
+      handleRegister
     }
   }
 }
@@ -150,6 +223,12 @@ label {
 .form-input:focus {
   border-color: #666;
   outline: none;
+}
+
+.error-text {
+  color: #d32f2f;
+  font-size: 0.8rem;
+  margin-top: 0.2rem;
 }
 
 .auth-button {
