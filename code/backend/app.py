@@ -25,10 +25,10 @@ def get_db_connection():
 
 def get_local_db_connection():
     return mysql.connector.connect(
-        host='localhost',
-        user='root',
-        password='root123',
-        database='manage',
+        host='123.56.94.39',
+        user='cs2202',
+        password='abcd',
+        database='data',
         charset='utf8mb4'
     )
 
@@ -666,8 +666,64 @@ from flask import send_from_directory
 @app.route('/avatar/<filename>')
 def get_avatar(filename):
     return send_from_directory('avatar', filename)
+
 @app.route('/api/user/avatar', methods=['POST'])
 def upload_avatar():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': '请先登录'}), 401
+
+    if 'file' not in request.files:
+        return jsonify({'success': False, 'message': '没有上传文件'}), 400
+
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'success': False, 'message': '没有选择文件'}), 400
+
+    # 检查文件类型
+    if not file.filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
+        return jsonify({'success': False, 'message': '只支持图片文件(png, jpg, jpeg, gif)'}), 400
+
+    try:
+        from PIL import Image
+        import io
+
+        # 确保头像目录存在
+        avatar_dir = os.path.join('avatar')
+        if not os.path.exists(avatar_dir):
+            os.makedirs(avatar_dir)
+
+        # 删除旧的头像文件（如果有）
+        old_files = glob.glob(os.path.join(avatar_dir, f"{session['user_id']}.*"))
+        for old_file in old_files:
+            try:
+                os.remove(old_file)
+            except OSError:
+                pass
+
+        # 读取图片并转换为PNG格式
+        img = Image.open(file.stream)
+        img = img.convert("RGB")  # 确保图片是RGB模式
+        img_byte_arr = io.BytesIO()
+        img.save(img_byte_arr, format='PNG')
+        img_byte_arr = img_byte_arr.getvalue()
+
+        # 保存新头像文件
+        filename = f"{session['user_id']}.png"
+        filepath = os.path.join(avatar_dir, filename)
+        with open(filepath, 'wb') as f:
+            f.write(img_byte_arr)
+
+        # 返回头像URL
+        avatar_url = f"/avatar/{filename}"
+
+        return jsonify({
+            'success': True,
+            'avatarUrl': avatar_url,
+            'message': '头像上传成功'
+        })
+    except Exception as e:
+        print(f"上传头像错误: {e}")
+        return jsonify({'success': False, 'message': '上传头像失败'}), 500
     if 'user_id' not in session:
         return jsonify({'success': False, 'message': '请先登录'}), 401
 

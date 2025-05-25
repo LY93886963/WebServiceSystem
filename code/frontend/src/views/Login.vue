@@ -68,7 +68,7 @@ export default {
         }, { withCredentials: true })
 
         if (response.data.success) {
-          router.push('/')
+          window.location.href = '/'
         } else {
           error.value = response.data.message || '登录失败'
         }

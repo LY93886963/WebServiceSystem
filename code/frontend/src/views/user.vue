@@ -155,7 +155,7 @@ export default {
       }
     },
     getUserAvatarUrl(userId) {
-      return `http://127.0.0.1:5000/avatar/${userId}.jpg`;
+      return `http://127.0.0.1:5000/avatar/${userId}.png`;
     },
     async fetchLikes() {
       this.likesLoading = true;
@@ -238,7 +238,8 @@ export default {
 
         if (response.data.success) {
           this.user.avatar = response.data.avatarUrl;
-          alert('头像上传成功');
+          window.location.reload();
+          
         } else {
           alert(response.data.message || '头像上传失败');
         }

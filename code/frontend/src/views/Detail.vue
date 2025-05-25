@@ -12,34 +12,9 @@
     <div class="main-content">
       <!-- 左半部分 - 图片展示 -->
       <div class="image-section">
-        <div class="main-image-container" ref="imageContainer" @mousedown="startImageDrag" @mousemove="doImageDrag"
-          @mouseup="endImageDrag" @mouseleave="endImageDrag">
-          <el-image :src="artifact.Image === '未知' ? '' : artifact.Image" :alt="artifact.Title" ref="mainImage"
-            @wheel.prevent="handleImageZoom" :style="{
-              transform: `scale(${zoomLevel}) translate(${dragOffset.x}px, ${dragOffset.y}px)`,
-              transformOrigin: `${zoomOrigin.x}% ${zoomOrigin.y}%`
-            }">
-            <template #error>
-              <div class="image-slot">
-                <el-icon><icon-picture /></el-icon>
-              </div>
-            </template>
-          </el-image>
-          <div class="thumbnail-overlay" v-if="showThumbnail">
-            <div class="thumbnail-container" ref="thumbnailContainer" @mousedown="startThumbnailDrag">
-              <img :src="artifact.Image" class="thumbnail" />
-              <div class="viewport-frame" :style="{
-                width: `${100 / zoomLevel}%`,
-                height: `${100 / zoomLevel}%`,
-                left: `${viewportPosition.x}%`,
-                top: `${viewportPosition.y}%`
-              }"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 缩放控制按钮 -->
-        <div class="zoom-controls">
+        <div class="main-image-container" id="openseadragon-container"></div>
+        <!-- 自定义控制按钮 -->
+        <div class="custom-controls">
           <button @click="zoomIn" title="放大">
             <img src="@/components/icons/zoom-in.png" class="button-icon" alt="放大" />
           </button>
@@ -48,9 +23,6 @@
           </button>
           <button @click="resetZoom" title="重置">
             <img src="@/components/icons/refresh.png" class="button-icon" alt="重置" />
-          </button>
-          <button @click="toggleThumbnail" :title="showThumbnail ? '隐藏缩略图' : '显示缩略图'">
-            <img src="@/components/icons/thumbnail.png" class="button-icon" alt="缩略图" />
           </button>
           <button @click="toggleFullscreen" :title="isFullscreen ? '退出全屏' : '全屏'">
             <img :src="isFullscreen ? require('@/components/icons/fullscreen-exit.png') : require('@/components/icons/fullscreen.png')"
@@ -132,6 +104,8 @@
 </template>
 
 <script>
+import OpenSeadragon from 'openseadragon';
+
 export default {
   name: 'ArtifactDetail',
   data() {
@@ -152,20 +126,28 @@ export default {
       collectCount: 0,
       isLiked: false,
       isCollected: false,
-      // 图片操作状态
-      zoomLevel: 1,
-      zoomOrigin: { x: 50, y: 50 },
-      viewportPosition: { x: 0, y: 0 },
-      showThumbnail: true,
-      maxZoom: 5,
-      minZoom: 0.5,
-      isDragging: false,
-      dragStart: { x: 0, y: 0 },
-      dragOffset: { x: 0, y: 0 },
-      isThumbnailDragging: false,
-      lastThumbnailPosition: { x: 0, y: 0 },
+      // OpenSeadragon 实例
+      viewer: null,
       isFullscreen: false
     };
+  },
+  watch: {
+    '$route.query.id': {
+      immediate: true,
+      handler(newId) {
+        if (newId) {
+          this.fetchArtifactData();
+        }
+      }
+    },
+    // 监听图片变化
+    'artifact.Image': {
+      handler(newImage) {
+        if (newImage && newImage !== '未知') {
+          this.initOpenSeadragon();
+        }
+      }
+    }
   },
   created() {
     this.fetchArtifactData();
@@ -212,6 +194,52 @@ export default {
       } finally {
         this.loading = false;
       }
+    },
+
+    initOpenSeadragon() {
+      // 如果已有viewer实例，先销毁
+      if (this.viewer) {
+        this.viewer.destroy();
+      }
+
+      // 确保容器存在
+      this.$nextTick(() => {
+        if (!document.getElementById('openseadragon-container')) {
+          console.error('OpenSeadragon container not found');
+          return;
+        }
+
+        // 初始化OpenSeadragon
+        this.viewer = OpenSeadragon({
+          id: 'openseadragon-container',
+          prefixUrl: 'https://cdnjs.cloudflare.com/ajax/libs/openseadragon/2.4.2/images/',
+          tileSources: {
+            type: 'image',
+            url: this.artifact.Image
+          },
+          showNavigator: true,
+          navigatorPosition: 'TOP_RIGHT',
+          navigatorHeight: '100px',
+          navigatorWidth: '150px',
+          animationTime: 0.5,
+          blendTime: 0.1,
+          constrainDuringPan: true,
+          maxZoomPixelRatio: 5,
+          minZoomLevel: 0.5,
+          visibilityRatio: 1.0,
+          zoomPerScroll: 1.2,
+          showNavigationControl: false, // 禁用原生控制按钮
+          gestureSettingsMouse: {
+            clickToZoom: true,
+            dblClickToZoom: true,
+            pinchToZoom: true,
+            scrollToZoom: true,
+            flickEnabled: true,
+            flickMinSpeed: 120,
+            flickMomentum: 0.25
+          }
+        });
+      });
     },
 
     async toggleLike() {
@@ -276,144 +304,34 @@ export default {
       }
     },
 
-
-    startImageDrag(e) {
-      if (this.zoomLevel <= 1) return;
-      this.isDragging = true;
-      this.dragStart = {
-        x: e.clientX - this.dragOffset.x,
-        y: e.clientY - this.dragOffset.y
-      };
-      this.$refs.imageContainer.style.cursor = 'grabbing';
-    },
-
-    doImageDrag(e) {
-      if (!this.isDragging) return;
-      this.dragOffset = {
-        x: e.clientX - this.dragStart.x,
-        y: e.clientY - this.dragStart.y
-      };
-      this.updateViewportPosition();
-    },
-
-    endImageDrag() {
-      this.isDragging = false;
-      this.$refs.imageContainer.style.cursor = 'grab';
-    },
-
-    startThumbnailDrag(e) {
-      this.isThumbnailDragging = true;
-      this.lastThumbnailPosition = { x: e.clientX, y: e.clientY };
-      e.preventDefault();
-    },
-
-    doThumbnailDrag(e) {
-      if (!this.isThumbnailDragging) return;
-
-      const deltaX = e.clientX - this.lastThumbnailPosition.x;
-      const deltaY = e.clientY - this.lastThumbnailPosition.y;
-
-      this.lastThumbnailPosition = { x: e.clientX, y: e.clientY };
-
-      const container = this.$refs.thumbnailContainer;
-      const containerRect = container.getBoundingClientRect();
-
-      const moveXPercent = (deltaX / containerRect.width) * 100;
-      const moveYPercent = (deltaY / containerRect.height) * 100;
-
-      this.viewportPosition.x = Math.max(0, Math.min(100 - (100 / this.zoomLevel), this.viewportPosition.x + moveXPercent));
-      this.viewportPosition.y = Math.max(0, Math.min(100 - (100 / this.zoomLevel), this.viewportPosition.y + moveYPercent));
-
-      this.dragOffset.x = -this.viewportPosition.x * (this.zoomLevel - 1);
-      this.dragOffset.y = -this.viewportPosition.y * (this.zoomLevel - 1);
-    },
-
-    endThumbnailDrag() {
-      this.isThumbnailDragging = false;
-    },
-
-    updateViewportPosition() {
-      if (this.zoomLevel <= 1) {
-        this.viewportPosition = { x: 0, y: 0 };
-        return;
-      }
-      const container = this.$refs.imageContainer;
-      const containerRect = container.getBoundingClientRect();
-      const viewportX = (-this.dragOffset.x / (this.zoomLevel - 1)) * 100 / containerRect.width;
-      const viewportY = (-this.dragOffset.y / (this.zoomLevel - 1)) * 100 / containerRect.height;
-      this.viewportPosition = {
-        x: Math.max(0, Math.min(100 - (100 / this.zoomLevel), viewportX)),
-        y: Math.max(0, Math.min(100 - (100 / this.zoomLevel), viewportY))
-      };
-    },
-
-    handleImageZoom(e) {
-      const container = this.$refs.imageContainer;
-      const rect = container.getBoundingClientRect();
-      const x = ((e.clientX - rect.left - this.dragOffset.x) / rect.width) * 100;
-      const y = ((e.clientY - rect.top - this.dragOffset.y) / rect.height) * 100;
-      this.zoomOrigin = { x, y };
-      const delta = e.deltaY > 0 ? -0.1 : 0.1;
-      const newZoom = Math.max(this.minZoom, Math.min(this.maxZoom, this.zoomLevel + delta));
-      const ratio = newZoom / this.zoomLevel;
-      this.dragOffset = {
-        x: (this.dragOffset.x + rect.width * (this.zoomOrigin.x / 100)) * ratio - rect.width * (this.zoomOrigin.x / 100),
-        y: (this.dragOffset.y + rect.height * (this.zoomOrigin.y / 100)) * ratio - rect.height * (this.zoomOrigin.y / 100)
-      };
-      this.zoomLevel = parseFloat(newZoom.toFixed(2));
-      this.updateViewportPosition();
-    },
-
     zoomIn() {
-      this.zoomLevel = Math.min(this.maxZoom, this.zoomLevel + 0.5);
-      this.updateViewportPosition();
+      if (this.viewer) {
+        this.viewer.viewport.zoomBy(1.5);
+      }
     },
 
     zoomOut() {
-      this.zoomLevel = Math.max(this.minZoom, this.zoomLevel - 0.5);
-      this.updateViewportPosition();
-    },
-
-    resetZoom() {
-      this.zoomLevel = 1;
-      this.dragOffset = { x: 0, y: 0 };
-      this.zoomOrigin = { x: 50, y: 50 };
-      this.viewportPosition = { x: 0, y: 0 };
-    },
-
-    toggleThumbnail() {
-      this.showThumbnail = !this.showThumbnail;
-    },
-
-    toggleFullscreen() {
-      const container = this.$refs.imageContainer;
-      if (!this.isFullscreen) {
-        if (container.requestFullscreen) {
-          container.requestFullscreen();
-        } else if (container.mozRequestFullScreen) {
-          container.mozRequestFullScreen();
-        } else if (container.webkitRequestFullscreen) {
-          container.webkitRequestFullscreen();
-        } else if (container.msRequestFullscreen) {
-          container.msRequestFullscreen();
-        }
-        this.isFullscreen = true;
-      } else {
-        if (document.exitFullscreen) {
-          document.exitFullscreen();
-        } else if (document.mozCancelFullScreen) {
-          document.mozCancelFullScreen();
-        } else if (document.webkitExitFullscreen) {
-          document.webkitExitFullscreen();
-        } else if (document.msExitFullscreen) {
-          document.msExitFullscreen();
-        }
-        this.isFullscreen = false;
+      if (this.viewer) {
+        this.viewer.viewport.zoomBy(0.5);
       }
     },
 
-    handleFullscreenChange() {
-      this.isFullscreen = document.fullscreenElement !== null;
+    resetZoom() {
+      if (this.viewer) {
+        this.viewer.viewport.goHome();
+      }
+    },
+
+    toggleFullscreen() {
+      if (!this.viewer) return;
+
+      if (!this.isFullscreen) {
+        this.viewer.setFullScreen(true);
+        this.isFullscreen = true;
+      } else {
+        this.viewer.setFullScreen(false);
+        this.isFullscreen = false;
+      }
     },
 
     goToDetail(id) {
@@ -421,16 +339,22 @@ export default {
     }
   },
   mounted() {
-    document.addEventListener('fullscreenchange', this.handleFullscreenChange);
+    document.addEventListener('fullscreenchange', () => {
+      this.isFullscreen = document.fullscreenElement !== null;
+    });
   },
   beforeDestroy() {
-    document.removeEventListener('fullscreenchange', this.handleFullscreenChange);
+    if (this.viewer) {
+      this.viewer.destroy();
+    }
+    document.removeEventListener('fullscreenchange', () => {
+      this.isFullscreen = document.fullscreenElement !== null;
+    });
   }
 };
 </script>
 
 <style scoped>
-
 .title-row {
   display: flex;
   justify-content: space-between;
@@ -469,7 +393,6 @@ export default {
   color: #666;
 }
 
-
 .artifact-detail-container {
   width: 1200px;
   margin-left: -200px;
@@ -489,21 +412,6 @@ export default {
   padding-bottom: 15px;
   width: 1400px;
   border-bottom: 1px solid #d3d3d3;
-}
-
-.image-slot {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 100%;
-  height: 100%;
-  background: var(--el-fill-color-light);
-  color: var(--el-text-color-secondary);
-  font-size: 30px;
-}
-
-.image-slot .el-icon {
-  font-size: 30px;
 }
 
 .back-button {
@@ -553,65 +461,26 @@ export default {
   position: relative;
   width: 100%;
   height: 559px;
-  overflow: hidden;
   background-color: #f5f5f5;
-  cursor: grab;
 }
 
-.main-image-container.dragging {
-  cursor: grabbing;
-}
-
-.main-image-container img {
+/* OpenSeadragon 容器样式 */
+#openseadragon-container {
   width: 100%;
   height: 100%;
-  object-fit: contain;
-  transition: transform 0.2s ease;
 }
 
-.thumbnail-overlay {
+/* 自定义控制按钮样式 */
+.custom-controls {
   position: absolute;
-  top: 20px;
+  bottom: 20px;
   right: 20px;
-  background: rgba(255, 255, 255, 0.95);
-  padding: 5px;
-  border: 1px solid #ddd;
+  display: flex;
+  gap: 10px;
   z-index: 10;
 }
 
-.thumbnail-container {
-  position: relative;
-  width: 150px;
-  height: 100px;
-  overflow: hidden;
-  cursor: move;
-}
-
-.thumbnail {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  opacity: 0.9;
-}
-
-.viewport-frame {
-  position: absolute;
-  border: 2px solid #000;
-  pointer-events: none;
-  box-sizing: border-box;
-}
-
-.zoom-controls {
-  position: absolute;
-  bottom: 20px;
-  right: -40px;
-  width: 90px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.zoom-controls button {
+.custom-controls button {
   width: 40px;
   height: 40px;
   border: none;
@@ -628,7 +497,7 @@ export default {
   padding: 0;
 }
 
-.zoom-controls button:hover {
+.custom-controls button:hover {
   background: #f0f0f0;
   transform: scale(1.1);
 }
@@ -805,14 +674,9 @@ export default {
     height: 400px;
   }
 
-  .thumbnail-overlay {
+  .custom-controls {
     top: 10px;
     right: 10px;
-  }
-
-  .thumbnail-container {
-    width: 100px;
-    height: 70px;
   }
 }
 </style>

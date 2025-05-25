@@ -63,7 +63,7 @@
 </template>
 
 <script>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, watch,onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import AdvancedSearchPanel from './AdvancedSearchPanel.vue'
@@ -78,7 +78,7 @@ export default {
     const user = ref(null)
     const showDropdown = ref(false)
     const showAdvancedSearch = ref(false)
-
+    
     // 获取当前用户
     const fetchCurrentUser = async () => {
       try {
@@ -139,7 +139,6 @@ export default {
     onUnmounted(() => {
       document.removeEventListener('click', handleClickOutside)
     })
-
     return {
       user,
       showDropdown,
