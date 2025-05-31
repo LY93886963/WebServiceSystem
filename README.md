@@ -34,8 +34,8 @@ python app.py
 
 ## 📌技术栈
 
-- 前端：Vue 3、Axios
-- 后端：Flask、Flask-SQLAlchemy、Flask-CORS 
+- 前端：Vue 3、Axios、Vue Router、Pinia、Element Plus/Ant Design Vue、ECharts/D3.js
+- 后端：Flask、Flask-SQLAlchemy、Flask-CORS、Werkzeug、PyPinyin、Neo4j Python Driver 
 - 数据库：MySQL 、neo4j
 
 ## ⏳功能模块
